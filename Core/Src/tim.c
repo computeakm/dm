@@ -867,7 +867,7 @@ extern AccelCalibParam accelCalibParam;
 float accel_x, accel_y, accel_z;
 float gyro_x, gyro_y, gyro_z;
 
-extern PIDController x_speed_pid,x_Angle,y_speed_pid,y_Angle,z_speed_pid,z_Angle,hight_speed_pid,hight_position_pid,x_position_pid,y_position_pid;
+extern PIDController x_speed_pid,x_Angle,y_speed_pid,y_Angle,z_speed_pid,z_Angle,hight_speed_pid,hight_position_pid,x_position_pid,y_position_pid,x_uav_speed_pid,y_uav_speed_pid;
 extern PIDController_Angle pid_angle_speed;
 extern PIDController_Angle pid_angle_position;
 extern PIDController pid_temp;
@@ -884,7 +884,7 @@ float alpha = 0.09f;
 float alpha_g = 0.3f; 
 float alpha_a = 0.2f; 
 int losstime=10;
-extern float ch0,ch1,ch2,ch3,ch4,ch5,ch6,ch7;
+extern float ch0,ch1,ch2,ch3,ch4,ch5,ch6,ch7,ch10,ch11,ch8;
 float x_older,y_older,z_older;
 float x_lpf,y_lpf,z_lpf,gyro_x_lpf,gyro_y_lpf,gyro_z_lpf,accel_x_lpf,accel_y_lpf,accel_z_lpf;
 
@@ -922,6 +922,8 @@ extern FilterRCLowpass lowpass_filter_speed_y;
 extern FilterRCLowpass lowpass_filter_speed_z;
 float word_speed[3];
 float body_speed[3];
+UAV_xyz imu_accle;
+UAV_xyz imu_gyro;
 UAV_xyz word_accle;
 UAV_xyz body_accle;
 UAV_xyz word_speed2;
@@ -937,7 +939,7 @@ extern MovAvgState mov_avg_speed_z;
 extern MovAvgState msg_speed_x_filter;
 extern MovAvgState msg_speed_y_filter;
 extern MovAvgState msg_speed_z_filter;
-
+int dis;
 
 uint32_t old_time;
 uint32_t old_distance;
@@ -1023,16 +1025,40 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         case 1:
 					 x_older=(ch1-50.0f)/600.0f*3.14f;
 				  y_older=(ch0-50.0f)/600.0f*3.14f;
-				  z_older=(ch3-50.0f)/600.0f*3.14f;
+				  z_older=(ch3-50.0f)/10.0f;
+			
            //angle loo
-
-       Quaternion_compute_to_errorangle(mahonyAHRS.yaw,y_older,x_older,&mahonyAHRS, &angle[0]);
-        //Quaternion_compute_to_errorangle(0,(ch0-50.0f)/100.0f*3.14f, (ch1-50.0f)/100.0f*3.14f,&mahonyAHRS, &angle[0]);
+//				if(y_older==0.0f&&x_older==0.0f&&ch8>90)
+//				{
+//						PIDController_Update(&x_uav_speed_pid,0.0f,body_speed2.x);
+//				PIDController_Update(&y_uav_speed_pid,0.0f,body_speed2.y);
+////				PIDController_Update(&x_uav_speed_pid,0.0f,body_speed2.x);
+////				PIDController_Update(&y_uav_speed_pid,0.0f,body_speed2.y);
+//        PIDController_Update(&y_Angle,-x_uav_speed_pid.out, -mahonyAHRS.pitch);
+////        PIDController_Update(&x_Angle,-y_uav_speed_pid.out,   mahonyAHRS.roll);
+//        //PIDController_Update(&z_Angle, ch3-50.0f, mahonyAHRS.yaw);
+//        PIDController_Update(&x_speed_pid, x_Angle.out, gyro_x);
+//        PIDController_Update(&y_speed_pid, y_Angle.out, -gyro_y);
+//        PIDController_Update(&z_speed_pid, 0, -gyro_z);
+//				}else
+//				{
+////					 Quaternion_compute_to_errorangle(mahonyAHRS.yaw,y_older,x_older,&mahonyAHRS, &angle[0]);
+////        //Quaternion_compute_to_errorangle(0,(ch0-50.0f)/100.0f*3.14f, (ch1-50.0f)/100.0f*3.14f,&mahonyAHRS, &angle[0]);
+//////			
+//////        Quaternion_PIDController(&x_Angle,angle[0]);
+//////        Quaternion_PIDController(&y_Angle,-angle[1]);
+////        
+//        PIDController_Update(&y_Angle,y_older, -mahonyAHRS.pitch);
+//        PIDController_Update(&x_Angle,x_older,   mahonyAHRS.roll);
 //			
-//        Quaternion_PIDController(&x_Angle,angle[0]);
-//        Quaternion_PIDController(&y_Angle,-angle[1]);
-        
-        PIDController_Update(&y_Angle,y_older, -mahonyAHRS.pitch);
+//        //PIDController_Update(&z_Angle, ch3-50.0f, mahonyAHRS.yaw);
+//        PIDController_Update(&x_speed_pid, x_Angle.out, gyro_x);
+//        PIDController_Update(&y_speed_pid, y_Angle.out, -gyro_y);
+//        PIDController_Update(&z_speed_pid, (ch3-50.0f)/10.0f, -gyro_z);
+//				
+//				}
+//      
+				  PIDController_Update(&y_Angle,y_older, -mahonyAHRS.pitch);
         PIDController_Update(&x_Angle,x_older,   mahonyAHRS.roll);
 			
         //PIDController_Update(&z_Angle, ch3-50.0f, mahonyAHRS.yaw);
@@ -1050,30 +1076,31 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         motor4_speed=uav_h - uav_x -  uav_y - uav_z; //BL
           break;
         case 2:
-//        Quaternion_compute_to_errorangle((ch3-50.0f)/100.0f*3.14f,(ch0-50.0f)/100.0f*3.14f, (ch1-50.0f)/100.0f*3.14f,&mahonyAHRS, &angle[0]);
-//        Quaternion_PIDController(&x_Angle,angle[0]);
-//        Quaternion_PIDController(&y_Angle,angle[1]);
-//				Quaternion_PIDController(&z_Angle,angle[2]);
-//        body_hight.z=mtf_01.distance/1000.0f;
-//        turn_body_to_world(mahonyAHRS,&word_hight,&body_hight);
-//        PIDController_Update(&y_Angle, (ch0-50.0f)/2.0f, -mahonyAHRS.pitch);
-//        PIDController_Update(&x_Angle, (ch1-50.0f)/2.0f, mahonyAHRS.roll);
-        //PIDController_Update(&z_Angle, ch3-50.0f, mahonyAHRS.yaw);
-//        PIDController_Update(&x_speed_pid, x_Angle.out, gyro_x);
-//        PIDController_Update(&y_speed_pid, y_Angle.out, -gyro_y);
-//				PIDController_Update(&z_speed_pid,z_Angle.out, -gyro_z);
-        //PIDController_Update(&z_speed_pid, (ch3-50.0f)/10.0f, -gyro_z);
-//        PIDIncremental_Update(&hight_position_pid, ch2/20.0f, word_hight.z);
-//        word_speed[2]=hight_position_pid.out;
-//        WorldToBodyFromMahony(&mahonyAHRS,&word_speed[0],&body_speed[0]);
-//        uav_h=body_speed[2];
-//        uav_x=x_speed_pid.out;
-//        uav_y=y_speed_pid.out;
-//        uav_z=z_speed_pid.out;
-//       motor1_speed=uav_h - uav_x + uav_y + uav_z; //FL
-//        motor2_speed=uav_h + uav_x + uav_y - uav_z; //FR
-//        motor3_speed=uav_h + uav_x - uav_y + uav_z; //BR
-//        motor4_speed=uav_h - uav_x -  uav_y - uav_z; //BL
+					 y_older=(ch1-50.0f)/10.0f;
+				  x_older=(ch0-50.0f)/10.0f;
+				  z_older=(ch3-50.0f)/10.0f;
+				
+				
+			
+           //angle loo
+				PIDController_Update(&x_uav_speed_pid,x_older,body_speed2.x);
+				PIDController_Update(&y_uav_speed_pid,y_older,body_speed2.y);
+        PIDController_Update(&y_Angle,x_uav_speed_pid.out, -mahonyAHRS.pitch);
+        PIDController_Update(&x_Angle,-y_uav_speed_pid.out,   mahonyAHRS.roll);
+        PIDController_Update(&x_speed_pid, x_Angle.out, gyro_x);
+        PIDController_Update(&y_speed_pid, y_Angle.out, -gyro_y);
+        PIDController_Update(&z_speed_pid, z_older, -gyro_z);
+				
+      
+      
+        uav_h=ch2;
+        uav_x=x_speed_pid.out;
+        uav_y=y_speed_pid.out;
+        uav_z=z_speed_pid.out;
+        motor1_speed=uav_h - uav_x + uav_y + uav_z; //FL
+        motor2_speed=uav_h + uav_x + uav_y - uav_z; //FR
+        motor3_speed=uav_h + uav_x - uav_y + uav_z; //BR
+        motor4_speed=uav_h - uav_x -  uav_y - uav_z; //BL
 
 
 
@@ -1124,6 +1151,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         
         
          turn_body_to_world(mahonyAHRS,&word_accle,&body_accle);
+				 
 				 word_accle.z=word_accle.z-9.8f;
 				 word_speed3.x+=word_accle.x*0.00083333f;
 				 word_speed3.y+=word_accle.y*0.00083333f;
@@ -1138,20 +1166,25 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 				 {
 					
 				 time_s=(mtf_01.time_ms-old_time);
-         if(mtf_01.flow_quality>30&&gyro_x<0.5f&&gyro_x>-0.5f&&gyro_y<0.5f&&gyro_y>-0.5f)
+         if(mtf_01.flow_quality>30&&gyro_x<0.3f&&gyro_x>-0.3f&&gyro_y<0.3f&&gyro_y>-0.3f&&gyro_z>-0.3f&&gyro_z<0.3f)
          {
-				 mtf_01_speed.x=(float)mtf_01.flow_vel_x*mtf_01.distance/100000.0f;
-				 mtf_01_speed.y=(float)mtf_01.flow_vel_y*mtf_01.distance/100000.0f;
-         if(mtf_01.strength>30)
+					 
+					 if(mtf_01.strength>1)
+					 {
+						 dis=mtf_01.distance;
+					 }
+				 mtf_01_speed.x=(float)mtf_01.flow_vel_x*dis/100000.0f;
+				 mtf_01_speed.y=(float)mtf_01.flow_vel_y*dis/100000.0f;
+         if(mtf_01.strength>2)
          {
-           mtf_01_speed.z= ((float)mtf_01.distance-(float)old_distance)/time_s/1000.0f;
+           mtf_01_speed.z= ((float)dis-(float)old_distance)/time_s/1000.0f;
          }
 				
 				 turn_body_to_world(mahonyAHRS,&mtf_01_speed,&mtf_01_speed);
 					 
-				 word_speed2.x=0.9f*mtf_01_speed.x+0.1f*word_speed3.x;
-         word_speed2.y=0.9f*mtf_01_speed.y+0.1f*word_speed3.y;
-         word_speed2.z=0.9f*mtf_01_speed.z+0.1f*word_speed3.z;
+//				 word_speed2.x=0.4f*mtf_01_speed.x+0.6f*word_speed3.x;
+//         word_speed2.y=0.4f*mtf_01_speed.y+0.6f*word_speed3.y;
+//         word_speed2.z=0.4f*mtf_01_speed.z+0.6f*word_speed3.z;
 				//  word_speed2.y=mtf_01_speed.y;
 				// 	word_speed2.z=mtf_01_speed.z;
        
@@ -1162,28 +1195,29 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
           word_speed3.y=movavg_process(&msg_speed_y_filter, word_speed3.y);
           word_speed3.z=movavg_process(&msg_speed_z_filter, word_speed3.z); 
 					 
-         }else if(mtf_01.flow_quality>30)
-         {
-         mtf_01_speed.x=(float)mtf_01.flow_vel_x*mtf_01.distance/100000.0f;
-				 mtf_01_speed.y=(float)mtf_01.flow_vel_y*mtf_01.distance/100000.0f;
-				 mtf_01_speed.z= ((float)mtf_01.distance-(float)old_distance)/time_s/1000.0f;
-				 turn_body_to_world(mahonyAHRS,&mtf_01_speed,&mtf_01_speed);
-					 
-				 word_speed2.x=0.2f*mtf_01_speed.x+0.8f*word_speed3.x;
-         word_speed2.y=0.2f*mtf_01_speed.y+0.8f*word_speed3.y;
-         word_speed2.z=0.2f*mtf_01_speed.z+0.8f*word_speed3.z;
-				//  word_speed2.y=mtf_01_speed.y;
-				// 	word_speed2.z=mtf_01_speed.z;
-       
-					 word_speed3.x=word_speed2.x;
-					 word_speed3.y=word_speed2.y;
-					 word_speed3.z=word_speed2.z;
-				 	word_speed3.x=movavg_process(&msg_speed_x_filter, word_speed3.x);
-          word_speed3.y=movavg_process(&msg_speed_y_filter, word_speed3.y);
-          word_speed3.z=movavg_process(&msg_speed_z_filter, word_speed3.z); 
          }
+//				 else if(mtf_01.flow_quality>30)
+//         {
+//         mtf_01_speed.x=(float)mtf_01.flow_vel_x*dis/100000.0f;
+//				 mtf_01_speed.y=(float)mtf_01.flow_vel_y*dis/100000.0f;
+//				 mtf_01_speed.z= ((float)dis-(float)old_distance)/time_s/1000.0f;
+//				 turn_body_to_world(mahonyAHRS,&mtf_01_speed,&mtf_01_speed);
+//					 
+//				 word_speed2.x=0.1f*mtf_01_speed.x+0.9f*word_speed3.x;
+//         word_speed2.y=0.1f*mtf_01_speed.y+0.9f*word_speed3.y;
+//         word_speed2.z=0.1f*mtf_01_speed.z+0.9f*word_speed3.z;
+//				//  word_speed2.y=mtf_01_speed.y;
+//				// 	word_speed2.z=mtf_01_speed.z;
+//       
+//					 word_speed3.x=word_speed2.x;
+//					 word_speed3.y=word_speed2.y;
+//					 word_speed3.z=word_speed2.z;
+//				 	word_speed3.x=movavg_process(&msg_speed_x_filter, word_speed3.x);
+//          word_speed3.y=movavg_process(&msg_speed_y_filter, word_speed3.y);
+//          word_speed3.z=movavg_process(&msg_speed_z_filter, word_speed3.z); 
+//         }
 				 old_time=mtf_01.time_ms;
-					old_distance=mtf_01.distance;
+					old_distance=dis;
 					 mtf_01.ready=0;
 					 
 				 }
@@ -1257,7 +1291,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         accel_x=filter_rc_bandstop_process(&bandstop_filter_ax,accel[0]);
         accel_y=filter_rc_bandstop_process(&bandstop_filter_ay,accel[1]);
         accel_z=filter_rc_bandstop_process(&bandstop_filter_az,accel[2]);
-
+				imu_accle.x=
 
 
 			
@@ -1276,12 +1310,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       {
         losstime=500;
       }
-      SYStime += 0.0001f;
+      SYStime += 0.00066667;
 			
-      if(SYStime >= 1.0f)
-      {
-        SYStime = 0.0f;
-      } 
+     
       // Your code here
     }
 		

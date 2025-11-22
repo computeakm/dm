@@ -40,6 +40,7 @@ dm/tim.o: ..\Core\Src\tim.c ..\Core\Inc\tim.h ..\Core\Inc\main.h \
   ..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_ll_usb.h \
   ..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_pcd_ex.h \
   ..\Core\Src\pid.h ..\Core\Src\BMI088Middleware.h \
-  ..\Core\Src\BMI088driver.h ..\Core\Src\MahonyAHRS.h ..\Core\Src\CRSF.h \
+  ..\Core\Src\BMI088driver.h ..\Core\Src\MahonyAHRS.h \
+  ..\Core\Inc\usart.h ..\MDK-ARM\buzzer.h ..\Core\Src\CRSF.h \
   ..\Core\Src\motor.h ..\Core\Src\dshot.h \
   ..\Core\Inc\filter_rc_bandpass.h ..\MDK-ARM\mtf01.h

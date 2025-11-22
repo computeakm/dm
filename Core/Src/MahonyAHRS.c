@@ -15,13 +15,7 @@
 // Header files
 
 #include "MahonyAHRS.h"
-#include <math.h>
-#include "usart.h"
-#include "stdio.h"
-#include "bmi088driver.h"
-#include "buzzer.h"
-#include "string.h"
-//---------------------------------------------------------------------------------------------------
+
 // Definitions
 
 
@@ -638,8 +632,8 @@ void Mahony_computeAngles(MahonyAHRS* ahrs)
 //	pitch = asinf(-2.0f * (q1*q3 - q0*q2));
 //	yaw = atan2f(q1*q2 + q0*q3, 0.5f - q2*q2 - q3*q3);
 	anglesComputed = 1;
-	ahrs->roll = roll-0.01f;
-	ahrs->pitch = pitch-0.02f;
+	ahrs->roll = roll+0.003f;
+	ahrs->pitch = pitch-0.01f;
 	ahrs->yaw = yaw;
 	ahrs->anglesComputed = anglesComputed;
 }
@@ -1004,8 +998,11 @@ float v_gworld[4];
       void WorldToBodyFromMahony(MahonyAHRS* ahrs,float *v_world, float *v_body)
       {
         float q[4] = { ahrs->q0, ahrs->q1, ahrs->q2, ahrs->q3 };
+
         WorldToBodyQuaternion(q, v_world, v_body);
       }
+			
+
 
       void WorldToBodyFromMahony_xyz(MahonyAHRS* ahrs,UAV_xyz *word_xyz,UAV_xyz *body_xyz)
       {

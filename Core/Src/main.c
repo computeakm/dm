@@ -69,14 +69,14 @@ extern float gyro[3], accel[3],temperate;
 extern float accel_x, accel_y, accel_z;
 extern float gyro_x, gyro_y, gyro_z;
 extern float temperate;
-char str[200];
+char str[230];
 uint16_t EMC[18]={0};
 uint8_t uartRx[16];
 extern uint8_t uartTemp[64];
 extern crsf_channels_t rcData;
 extern crsfLinkStatistics_t lqData;
 extern int  uartUpdate;
-PIDController x_speed_pid,x_Angle,y_speed_pid,y_Angle,z_speed_pid,z_Angle,hight_speed_pid,hight_position_pid,x_position_pid,y_position_pid;
+PIDController x_speed_pid,x_Angle,y_speed_pid,y_Angle,z_speed_pid,z_Angle,hight_speed_pid,hight_position_pid,x_position_pid,y_position_pid,x_uav_speed_pid,y_uav_speed_pid;
 PIDController_Angle pid_angle_speed;
 PIDController_Angle pid_angle_position;
 PIDController pid_temp;
@@ -243,16 +243,18 @@ int main(void)
 	float k=0.5;
   PIDController_Init(&x_speed_pid,0.2f, k*14.2f, k*0.0f, k*0.0f, 0.02f, -50.0f, 50.0f, -50.0f, 50.0f, 0.001f);
   PIDController_Init(&y_speed_pid,0.2f, k*17.2f, k*0.0f, k*0.0f, 0.02f, -50.0f, 50.0f, -50.0f, 50.0f, 0.001f);
-  PIDController_Init(&z_speed_pid,0.5f, 35.0f, 0.0f, 0.0f, 0.02f, -50.0f, 50.0f, -5.0f, 5.0f, 0.001f);
+  PIDController_Init(&z_speed_pid,0.5f, 50.0f, 0.0f, 0.0f, 0.02f, -30.0f, 30.0f, -5.0f, 5.0f, 0.001f);
 	
-  PIDController_Init(&x_Angle,7.0f, 6.0f, 0.5f, 0.5f, 0.01f, -10.0f, 10.0f, -2.5f, 2.5f, 0.001f);
-  PIDController_Init(&y_Angle,7.0f, 6.0f, 0.5f, 0.5f, 0.01f, -10.0f, 10.0f, -2.5f, 2.5f, 0.001f);
+  PIDController_Init(&x_Angle,7.0f, 7.0f, 0.0f, 1.0f, 0.01f, -10.0f, 10.0f, -2.5f, 2.5f, 0.001f);
+  PIDController_Init(&y_Angle,7.0f, 7.0f, 0.0f, 1.0f, 0.01f, -10.0f, 10.0f, -2.5f, 2.5f, 0.001f);
   PIDController_Init(&z_Angle,0.0f, 0.0f, 0.0f, 0.0f, 0.01f, -10.0f, 10.0f, -3.0f, 3.0f, 0.001f);
 
   PIDTemp_Init(&pid_temp, 70.0f, 0.01f, 0.0f, 0.01f, 0.0f, 100.0f, 0.0f, 100.0f, 0.001f);
 
   PIDController_Init(&hight_position_pid,1000.0f, 0.0f, 0.0f, 0.0001f, 0.02f, -50.0f, 50.0f,-50.0f, 50.0f, 0.001f);
   PIDController_Init(&hight_speed_pid,0.5f, 15.2f, 0.0f, 0.0f, 0.02f, -50.0f, 50.0f, -5.0f, 5.0f, 0.001f);
+	PIDController_Init(&x_uav_speed_pid,0.0f, 0.1f, 0.000f, 0.0f, 0.02f, -15.0f/180.0f*3.14f, 15.0f/180.0f*3.14f, -2.0f/180.0f*3.14f, 2.0f/180.0f*3.14f, 0.001f);
+  PIDController_Init(&y_uav_speed_pid,0.0f,0.1f, 0.000f, 0.0f, 0.02f, -15.0f/180.0f*3.14f, 15.0f/180.0f*3.14f, -2.0f/180.0f*3.14f, 2.0f/180.0f*3.14f, 0.001f);
   PIDController_Init(&x_position_pid,0.2f, 0.0f, 0.0f, 0.0f, 0.02f, -20.0f, 20.0f, -5.0f, 5.0f, 0.001f);
   PIDController_Init(&y_position_pid,0.2f, 0.0f, 0.0f, 0.0f, 0.02f, -20.0f, 20.0f, -5.0f, 5.0f, 0.001f);
 
@@ -275,8 +277,8 @@ int main(void)
   filter_rc_lowpass_init(&lowpass_filter_speed_x, 1200.0f, 1000.0f);
   filter_rc_lowpass_init(&lowpass_filter_speed_y, 1200.0f, 1000.0f);
   filter_rc_lowpass_init(&lowpass_filter_speed_z, 1200.0f, 1000.0f);
-  movavg_init(&mov_avg_speed_x, mov_avg_speed_x_buffer, 10);
-  movavg_init(&mov_avg_speed_y, mov_avg_speed_y_buffer, 10);
+  movavg_init(&mov_avg_speed_x, mov_avg_speed_x_buffer, 3);
+  movavg_init(&mov_avg_speed_y, mov_avg_speed_y_buffer, 3);
   movavg_init(&mov_avg_speed_z, mov_avg_speed_z_buffer, 10);
   movavg_init(&msg_speed_x_filter, msg_speed_x_filter_buffer, 3);
   movavg_init(&msg_speed_y_filter, msg_speed_y_filter_buffer, 3);
@@ -356,10 +358,10 @@ WS2812_Ctrl(10,0,10);
         cotrol_mode=2;
       }else if(ch7<90&&ch7>10)
       {
-        cotrol_mode=0;
+        cotrol_mode=1;
       }else
       {
-        cotrol_mode=1;
+        cotrol_mode=0;
       }
 
       if(ch6>90)
@@ -550,7 +552,7 @@ HAL_UART_Receive_IT(&huart7, uartRx, 16);
 //HAL_UART_Transmit(&huart1, (uint8_t*)str, strlen(str), 0xff);
 //sprintf(str,"pid_speed::%.6f,%.6f,%.6f\n", x_speed_pid.out, y_speed_pid.out, z_speed_pid.out);
 //HAL_UART_Transmit(&huart1, (uint8_t*)str, strlen(str), 0xff);
-sprintf(str,"data:%d,%d,%d,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%f,%f,%f,%f,%f\n",speed[0], speed[1], speed[2], speed[3],accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z,mahonyAHRS.roll,mahonyAHRS.pitch, mahonyAHRS.yaw,angle[0],angle[1],angle[2],mahonyAHRS.q0,mahonyAHRS.q1,mahonyAHRS.q2,mahonyAHRS.q3,y_Angle.out,x_Angle.out);
+sprintf(str,"data:%d,%d,%d,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%f,%f,%f,%f,%.3f,%.3f,%f,%f\n",speed[0], speed[1], speed[2], speed[3],accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z,mahonyAHRS.roll,mahonyAHRS.pitch, mahonyAHRS.yaw,angle[0],angle[1],angle[2],mahonyAHRS.q0,mahonyAHRS.q1,mahonyAHRS.q2,mahonyAHRS.q3,y_Angle.out,body_speed2.x,body_speed2.y,x_uav_speed_pid.out,y_uav_speed_pid.out);
 //HAL_UART_Transmit(&huart10, (uint8_t*)str, strlen(str), 0xff); 
 //sprintf(str,"data:%d,%d,%d,%d,%x,%d,%d\angle,mtf_01.distance,mtf_01.flow_vel_x,mtf_01.flow_vel_y,msg.status,u10_rx_data[0],msg.len,mtf_01.time_ms);
 //sprintf(str,"data:,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n",gyro[0],gyro[1],gyro[2],accel[0],accel[1],accel[2],accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z);

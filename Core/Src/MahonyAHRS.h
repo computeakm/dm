@@ -15,6 +15,13 @@
 
 //----------------------------------------------------------------------------------------------------
 // Variable declaration
+#include <math.h>
+#include "usart.h"
+#include "stdio.h"
+#include "bmi088driver.h"
+#include "buzzer.h"
+#include "string.h"
+#include "main.h"
 
 
 
@@ -36,6 +43,7 @@ typedef struct {
 
 typedef struct {
     float x,y,z;
+	  uint32_t time;
 } UAV_xyz;
 
 
@@ -113,6 +121,7 @@ void Quaternion_compute_to_errorangle_bodyEuler(float roll, float pitch, float y
  * - angle_body 输出为 {ex, ey, ez}（弧度），可直接用作机体轴的控制量（小角近似）
  */
 void ErrorQuaternionToBodyAngleFromMahony(float *q_err,MahonyAHRS *ahrs, float *angle_body);
+void WorldToBodyFromMahony_xyz(MahonyAHRS* ahrs,UAV_xyz *word_xyz,UAV_xyz *body_xyz);
 // ---------------------- 平滑滤波（一阶低通） ----------------------
 typedef struct {
     float alpha;       // 滤波系数（0..1）
